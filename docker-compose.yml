@@ -9,7 +9,8 @@ services:
     ports:
       - 8383:8383
     depends_on:
-      - influxdb
+      influxdb:
+        condition: service_healthy
 
   influxdb:
     image: influxdb
@@ -30,3 +31,8 @@ services:
       - DOCKER_INFLUXDB_INIT_BUCKET=vector-bucket
       - DOCKER_INFLUXDB_INIT_RETENTION=1w
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=A2jqhzcRPZeT3bAF
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8086"]
+        interval: 5s
+        timeout: 2s
+        retries: 5
