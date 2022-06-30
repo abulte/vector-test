@@ -20,20 +20,53 @@ source = '''
     .message,
     r'(?P<client_ip>[a-fA-F\d+\.:]+):(?P<client_port>\d+)\s+\[(?P<accept_date>.+)\]\s+(?P<frontend_name>.*)\s+(?P<backend_name>.*)/(?P<server_name>.*)\s+(?P<tq>-?\d+)/(?P<tw>-?\d+)/(?P<tc>-?\d+)/(?P<tr>-?\d+)/(?P<tt>\+?\d+)\s+(?P<status_code>-?\d+)\s+(?P<bytes_read>\+?\d+)\s+.*\s+(?P<act>\d+)/(?P<fe>\d+)/(?P<be>\d+)/(?P<srv>\d+)/(?P<retries>\+?\d+)\s+(?P<queue_server>\d+)/(?P<queue_backend>\d+)\s+"(?P<http_request>.*)"$'
 )
+.status_code = to_int!(.status_code)
 '''
+drop_on_error = true
+
+[transforms.filter_requests]
+type = "filter"
+inputs = [ "parse_haproxy" ]
+# only main datagouv backend and filter out http errors
+condition = '.backend_name == "DATAGOUVFR_NEWINFRA" && .status_code >= 200 && .status_code < 400 ?? null'
 
 [transforms.parse_http_request]
 type = "remap"
-inputs = [ "parse_haproxy" ]
+inputs = [ "filter_requests" ]
 # GET /0d/573351b046807d513851ffeb0121fbd885a8ccea6a9e30fb1b266f5fe761b9.csv HTTP/1.1
 source = '''
-. = parse_regex!(
+. |= parse_regex!(
     .http_request,
     r'(?P<method>\w+)\s+(?P<path>.*)\s+(?P<protocol>\w+/\d\.\d)?'
 )
+. = .status_code
 '''
 
-[sinks.out]
-type = "console"
-inputs = ["parse_http_request"]
-encoding.codec = "json"
+# [sinks.out]
+# type = "console"
+# inputs = ["parse_http_request"]
+# encoding.codec = "json"
+
+# [sinks.clickhouse]
+# type = "clickhouse"
+# inputs = [ "parse_http_request" ]
+# database = "clickhouse"
+# endpoint = "http://clickhouse:8123"
+# table = "vector"
+# compression = "gzip"
+# auth = { strategy = "basic", user = "clickhouse", password = "clickhouse" }
+
+[sinks.influxdb]
+    type = "influxdb_logs"
+    inputs = [ "parse_http_request" ]
+    bucket = "vector-bucket"
+    # consistency = "any"
+    # database = "vector-database"
+    endpoint = "http://influxdb:8086/"
+    org = "etalab"
+    # retention_policy_name = "autogen"
+    measurement = "vector-logs"
+    # namespace = "service"
+    # username = "influxdb"
+    token = "A2jqhzcRPZeT3bAF"
+    # password = "influxdb"
