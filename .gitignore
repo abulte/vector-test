@@ -1,3 +1,4 @@
 logs/*
 !logs/haproxy.log.example
 influxdb/data
+tables/*.csv
