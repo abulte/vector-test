@@ -1,7 +1,34 @@
+# [enrichment_tables.datasets]
+# type = "file"
+# [enrichment_tables.datasets.file]
+# encoding = { type = "csv", delimiter = ";" }
+# path = "/opt/tables/export-dataset-20220630-074553.csv"
+
+[enrichment_tables.resources]
+type = "file"
+[enrichment_tables.resources.file]
+encoding = { type = "csv", delimiter = ";" }
+path = "/opt/tables/export-resource-20220630-074940.csv"
+
+# [enrichment_tables.organizations]
+# type = "file"
+# [enrichment_tables.organizations.file]
+# encoding = { type = "csv", delimiter = ";" }
+# path = "/opt/tables/export-organization-20220630-075131.csv"
+
+# [enrichment_tables.reuses]
+# type = "file"
+# [enrichment_tables.reuses.file]
+# encoding = { type = "csv", delimiter = ";" }
+# path = "/opt/tables/export-reuse-20220630-075154.csv"
+
 [sources.haproxy]
 type = "file"
-include = [ "/opt/logs/haproxy.log.*" ]
+# include = [ "/opt/logs/haproxy.log.*" ]
+include = [ "/opt/logs/haproxy.log.extract_1000" ]
 read_from = "beginning"
+# re-read whole file at all times
+ignore_checkpoints = true
 
 [transforms.parse_syslog]
 type = "remap"
@@ -39,34 +66,87 @@ source = '''
     .http_request,
     r'(?P<method>\w+)\s+(?P<path>.*)\s+(?P<protocol>\w+/\d\.\d)?'
 )
-. = .status_code
 '''
 
-# [sinks.out]
-# type = "console"
-# inputs = ["parse_http_request"]
-# encoding.codec = "json"
+[transforms.detect_type]
+type = "remap"
+inputs = [ "parse_http_request" ]
+# /fr/datasets/r/3a908e66-2d33-4cb8-8ce1-66a7a46950a4
+# /resources/recharge-a-destination-tesla/20181130-201629/irve-tesla-destination-charging-20181130.csv
+# TODO: handle org hits, reuses hits, API hits
+source = '''
+resource_path_match = parse_regex(.path, r'^/resources/(?P<resource_path>.*)') ?? false
+resource_id_match = parse_regex(.path, r'^/\w{2}/datasets/r/(?P<resource_id>.*)') ?? false
 
-# [sinks.clickhouse]
-# type = "clickhouse"
-# inputs = [ "parse_http_request" ]
-# database = "clickhouse"
-# endpoint = "http://clickhouse:8123"
-# table = "vector"
-# compression = "gzip"
-# auth = { strategy = "basic", user = "clickhouse", password = "clickhouse" }
+if is_object(resource_path_match) {
+  .request_type = "resource_download"
+  .resource_path = resource_path_match.resource_path
+  .request_api = false
+} else if is_object(resource_id_match) {
+  .request_type = "resource_download"
+  .resource_id = resource_id_match.resource_id
+  .request_api = false
+} else if match(.path, r'^/\w{2}/datasets/.*') ?? false {
+  .request_type = "dataset_hit"
+  .request_api = false
+}
+'''
 
-[sinks.influxdb]
-    type = "influxdb_logs"
-    inputs = [ "parse_http_request" ]
-    bucket = "vector-bucket"
-    # consistency = "any"
-    # database = "vector-database"
-    endpoint = "http://influxdb:8086/"
-    org = "etalab"
-    # retention_policy_name = "autogen"
-    measurement = "vector-logs"
-    # namespace = "service"
-    # username = "influxdb"
-    token = "A2jqhzcRPZeT3bAF"
-    # password = "influxdb"
+[transforms.route_by_type]
+type = "route"
+inputs = [ "detect_type" ]
+
+  [transforms.route_by_type.route]
+  resource = '.request_type == "resource_download"'
+  dataset = '.request_type == "dataset_hit"'
+
+[transforms.map_to_resource]
+type = "remap"
+inputs = [ "route_by_type.resource" ]
+source = '''
+if exists(.resource_id) {
+  row = get_enrichment_table_record("resources", {"id": .resource_id}) ?? false
+  .dataset_id = get(row, ["dataset.id"]) ?? null
+} else if exists(.resource_path) {
+  url, err = join(["https://static.data.gouv.fr/resources/", .resource_path])
+  if err == null {
+    row = get_enrichment_table_record("resources", {"url": url}) ?? false
+    .dataset_id = get(row, ["dataset.id"]) ?? null
+    .resource_id = row.id
+  }
+}
+'''
+
+# [transforms.map_to_dataset]
+# type = "remap"
+# inputs = [ "route_by_type.dataset" ]
+# # TODO:
+
+[transforms.metric_count_resources]
+type = "log_to_metric"
+inputs = [ "map_to_resource" ]
+
+  [[transforms.metric_count_resources.metrics]]
+  field = "resource_id"
+  name = "resource_id"
+  namespace = "resource"
+  type = "counter"
+
+    [transforms.metric_count_resources.metrics.tags]
+      resource_id = "{{resource_id}}"
+      dataset_id = "{{dataset_id}}"
+
+[sinks.out]
+type = "console"
+inputs = [ "metric_count_resources" ]
+  [sinks.out.encoding]
+  codec = "json"
+
+[sinks.influxdb_metrics]
+type = "influxdb_metrics"
+inputs = [ "metric_count_resources" ]
+bucket = "vector-resources-bucket"
+endpoint = "http://influxdb:8086/"
+org = "etalab"
+token = "A2jqhzcRPZeT3bAF"
+default_namespace = "service"
