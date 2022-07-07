@@ -58,7 +58,6 @@ from(bucket: "vector-bucket")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "resource.resource_id")
   |> filter(fn: (r) => r["resource_id"] == "e5f40fbc-7a84-4c4a-94e4-55ac4299b222")
-  |> filter(fn: (r) => r["_field"] == "value")
   |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)
   |> yield(name: "sum")
 ```
