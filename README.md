@@ -14,7 +14,7 @@ When launching the stack, it also launches the pipeline computation (ie `vector`
 
 ### Pipeline
 
-TLDR; count resources downloads, aggregate them over 1 minute and send them to influxdb.
+TLDR; count resources downloads, aggregate them over 1 minute and send them to influxdb. Lives in [vector.toml](vector.toml).
 
 1. Open haproxy logs file(s) designated by `sources.haproxy.include`
 2. Parses them as syslog, then via a custom regex as haproxy log components (HTTPLog)
@@ -70,7 +70,7 @@ from(bucket: "vector-bucket")
 - `clickhouse` sink: big heavy stuff, couldn't manage to insert proper data into it (but the transform pipeline was not great at that point)
 - [logs vs metrics](https://vector.dev/docs/about/under-the-hood/architecture/data-model/#event-types): logs would be one unfiltered line, metrics associate a value to a line or an aggregate of line. Seems more appropriate now that I've understood how it works, not easy at first
 - metric type: [counter](https://vector.dev/docs/about/under-the-hood/architecture/data-model/metric/#counter) vs [set](https://vector.dev/docs/about/under-the-hood/architecture/data-model/metric/#set) — with aggregation, counter works pretty well
-- [`vector tap` in docker-compose](https://vector.dev/guides/level-up/vector-tap-guide/): pretty neat to log stuff when streaming, but does not work for a test with a small file (file is processed vector tap opens its tap)
+- [`vector tap` in docker-compose](https://vector.dev/guides/level-up/vector-tap-guide/): pretty neat to log stuff when streaming, but does not work for a test with a small file (file is processed before vector opens its tap)
 
 ## TODO
 
