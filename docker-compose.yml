@@ -1,16 +1,33 @@
-version: '3'
-
 services:
   vector:
     image: timberio/vector:0.22.2-debian
     volumes:
       - ./vector.toml:/etc/vector/vector.toml:ro
       - ./logs:/opt/logs:ro
-    ports:
-      - 8383:8383
+      - ./tables:/opt/tables:ro
     depends_on:
       influxdb:
         condition: service_healthy
+    healthcheck:
+      # no curl or wget in this image
+      test: timeout 10s bash -c ':> /dev/tcp/127.0.0.1/8686' || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    ports:
+      # useful if you want to use vector tap locally
+      # vector tap --url=http://localhost:8686/graphql
+      - 8686:8686
+
+  # can be used to stream-monitor vector processing
+  # takes a while to boostrap and will miss the first events
+  #
+  # vector_tap:
+  #   image: timberio/vector:0.22.2-debian
+  #   depends_on:
+  #     vector:
+  #       condition: service_healthy
+  #   command: tap --url=http://vector:8686/graphql
 
   influxdb:
     image: influxdb
@@ -22,17 +39,17 @@ services:
     ports:
       # The API for InfluxDB is served on port 8086
       - "8086:8086"
-      - "8082:8082"
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=influxdb
       - DOCKER_INFLUXDB_INIT_PASSWORD=influxdb
       - DOCKER_INFLUXDB_INIT_ORG=etalab
       - DOCKER_INFLUXDB_INIT_BUCKET=vector-bucket
-      - DOCKER_INFLUXDB_INIT_RETENTION=1w
+      - DOCKER_INFLUXDB_INIT_RETENTION=365d
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=A2jqhzcRPZeT3bAF
+      # - INFLUXD_LOG_LEVEL=debug
     healthcheck:
-        test: ["CMD", "curl", "-f", "http://localhost:8086"]
-        interval: 5s
-        timeout: 2s
-        retries: 5
+      test: curl -f http://localhost:8086/ping || exit 1
+      interval: 5s
+      timeout: 10s
+      retries: 5

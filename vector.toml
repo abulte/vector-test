@@ -1,33 +1,40 @@
+# used by `vector tap`
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+
 # [enrichment_tables.datasets]
 # type = "file"
 # [enrichment_tables.datasets.file]
 # encoding = { type = "csv", delimiter = ";" }
-# path = "/opt/tables/export-dataset-20220630-074553.csv"
+# path = "/opt/tables/datasets.csv"
 
 [enrichment_tables.resources]
 type = "file"
-[enrichment_tables.resources.file]
-encoding = { type = "csv", delimiter = ";" }
-path = "/opt/tables/export-resource-20220630-074940.csv"
+  [enrichment_tables.resources.file]
+  encoding = { type = "csv", delimiter = ";" }
+  path = "/opt/tables/resources.csv"
 
 # [enrichment_tables.organizations]
 # type = "file"
 # [enrichment_tables.organizations.file]
 # encoding = { type = "csv", delimiter = ";" }
-# path = "/opt/tables/export-organization-20220630-075131.csv"
+# path = "/opt/tables/organizations.csv"
 
 # [enrichment_tables.reuses]
 # type = "file"
 # [enrichment_tables.reuses.file]
 # encoding = { type = "csv", delimiter = ";" }
-# path = "/opt/tables/export-reuse-20220630-075154.csv"
+# path = "/opt/tables/reuses.csv"
 
 [sources.haproxy]
 type = "file"
-# include = [ "/opt/logs/haproxy.log.*" ]
-include = [ "/opt/logs/haproxy.log.extract_1000" ]
+include = [ "/opt/logs/haproxy.log.202206*" ]
+# include = [ "/opt/logs/haproxy.log.extract_1000" ]
+# include = [ "/opt/logs/haproxy.log.example_aggregate" ]
 read_from = "beginning"
 # re-read whole file at all times
+# FIXME: remove on real setup
 ignore_checkpoints = true
 
 [transforms.parse_syslog]
@@ -54,7 +61,7 @@ drop_on_error = true
 [transforms.filter_requests]
 type = "filter"
 inputs = [ "parse_haproxy" ]
-# only main datagouv backend and filter out http errors
+# only main datagouvfr backend and filter out http errors
 condition = '.backend_name == "DATAGOUVFR_NEWINFRA" && .status_code >= 200 && .status_code < 400 ?? null'
 
 [transforms.parse_http_request]
@@ -117,10 +124,52 @@ if exists(.resource_id) {
 }
 '''
 
+# TODO:
 # [transforms.map_to_dataset]
 # type = "remap"
 # inputs = [ "route_by_type.dataset" ]
-# # TODO:
+
+# -- LOG STRAGEGY (vs metrics strategy) --
+# So, this ain't pretty 😅
+# Alternatives:
+# - cleanup from scratch (ie not capture groups)
+# - use `only_fields` but it doesnt exist anymore 😭
+# - use log to metrics conversion (but this does not seem apt re our usecase)
+#   -> see below, works pretty well
+# [transforms.cleanup_message]
+# type = "remap"
+# inputs = ["map_to_resource"]
+# source = '''
+# del(.accept_date) # "12/Jun/2022:00:00:42.629",
+# del(.act) # "759",
+# del(.appname) # "haproxy",
+# del(.backend_name) # "DATAGOUVFR_NEWINFRA",
+# del(.be) # "5",
+# del(.bytes_read) # "+925",
+# del(.client_port) # "56940",
+# del(.fe) # "742",
+# del(.frontend_name) # "DATAGOUVFR_RGS~",
+# del(.hostname) # "slb-04",
+# del(.http_request) # "GET /fr/datasets/r/3a908e66-2d33-4cb8-8ce1-66a7a46950a4 HTTP/1.1",
+# del(.message) # "47.187.205.185:56940 [12/Jun/2022:00:00:42.629] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-05 0/0/1/14/+15 302 +925 - - --NN 759/742/5/2/0 0/0 \"GET /fr/datasets/r/3a908e66-2d33-4cb8-8ce1-66a7a46950a4 HTTP/1.1\"",
+# del(.procid) # 3103325,
+# del(.protocol) # "HTTP/1.1"
+# del(.queue_backend) # "0",
+# del(.queue_server) # "0",
+# del(.retries) # "0",
+# del(.srv) # "2",
+# del(.tc) # "1",
+# del(.tq) # "0",
+# del(.tr) # "14",
+# del(.tt) # "+15",
+# del(.tw) # "0"
+# '''
+
+# [sinks.out]
+# type = "console"
+# inputs = [ "cleanup_message" ]
+#   [sinks.out.encoding]
+#   codec = "json"
 
 [transforms.metric_count_resources]
 type = "log_to_metric"
@@ -128,24 +177,46 @@ inputs = [ "map_to_resource" ]
 
   [[transforms.metric_count_resources.metrics]]
   field = "resource_id"
-  name = "resource_id"
   namespace = "resource"
   type = "counter"
 
     [transforms.metric_count_resources.metrics.tags]
-      resource_id = "{{resource_id}}"
-      dataset_id = "{{dataset_id}}"
+    resource_id = "{{resource_id}}"
+    dataset_id = "{{dataset_id}}"
+    request_api = "{{request_api}}"
+    method = "{{method}}"
+    status_code = "{{status_code}}"
+    # server_name = "{{server_name}}"
+    # client_ip = "{{client_ip}}"
 
-[sinks.out]
-type = "console"
+# aggregates resources count over time
+# we don't _need_ to aggregate
+# if we don't, metrics.set might be better than metrics.count
+[transforms.aggregate_resources]
+type = "aggregate"
 inputs = [ "metric_count_resources" ]
-  [sinks.out.encoding]
-  codec = "json"
+interval_ms = 60_000
+
+# [sinks.out]
+# type = "console"
+# inputs = [ "aggregate_resources" ]
+#   [sinks.out.encoding]
+#   codec = "json"
+
+# -- LOG STRAGEGY (vs metrics strategy) --
+# [sinks.influxdb_logs]
+# type = "influxdb_logs"
+# inputs = [ "cleanup_message" ]
+# bucket = "vector-bucket"
+# endpoint = "http://influxdb:8086/"
+# org = "etalab"
+# token = "A2jqhzcRPZeT3bAF"
+# measurement = "vector-logs"
 
 [sinks.influxdb_metrics]
 type = "influxdb_metrics"
 inputs = [ "metric_count_resources" ]
-bucket = "vector-resources-bucket"
+bucket = "vector-bucket"
 endpoint = "http://influxdb:8086/"
 org = "etalab"
 token = "A2jqhzcRPZeT3bAF"
