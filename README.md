@@ -78,7 +78,7 @@ from(bucket: "vector-bucket")
 
 ## Questions and remarks
 
-- Is influx the right sink? FluxQL needs some getting used to... Needs to be batte tested. Time-series pattern looks promising for our use case though.
+- Is influx the right sink? FluxQL needs some getting used to... Needs to be battle tested. Time-series pattern looks promising for our use case though.
 - Aggregation: should we aggregate and on what window?
 - This stack might seem overkill for a single metric computation. Still, I believe it's very flexible for future use cases (ops logs, other business computations...). Vector can be deployed as [a distributed agent](https://vector.dev/docs/setup/deployment/topologies/#distributed) on multiple servers communicating with a central aggregator easily (it's just a source and sink!). We could deploy it everywhere we need to monitor or query something, whatever it is. We can even [plug it natively into our kafka stream](https://vector.dev/docs/setup/deployment/topologies/#stream-based). Also, the pattern is coherent with what we're building with Kafka and data analysis services, it's kind of an event based logging thingy, with consumers and stuff.
 - FYI, vector is written in Rust and influxdb in Golang
