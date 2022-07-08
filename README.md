@@ -12,6 +12,11 @@ The influxdb bucket, org, token... is created automatically at first run. The do
 
 When launching the stack, it also launches the pipeline computation (ie `vector` runs). It can take a while when processing big files, use `vector tap` (cf below) to see what happens!
 
+### Requirements
+
+- [Download data.gouv.fr's catalog from](https://www.data.gouv.fr/fr/datasets/catalogue-des-donnees-de-data-gouv-fr/) and store them in the `./tables/` directory, as `datasets.csv`, `organizations.csv`, `resources.csv`, `reuses.csv`
+- Get some log files and put those in `./logs`
+
 ### Pipeline
 
 TLDR; count resources downloads, aggregate them over 1 minute and send them to influxdb. Lives in [vector.toml](vector.toml).
@@ -21,7 +26,7 @@ TLDR; count resources downloads, aggregate them over 1 minute and send them to i
 3. Filter based on haproxy backend (data.gouv.fr) and status code (no errors)
 4. Enrich with business info in `detect_type`: this is where you detect if it's a dataset, a resource... an api call or not...
 5. Route based on `detect_type`: this dispatches the lines based on their type and allows custom logic for each type
-6. `map_to_resource` is specific to, well, resources. It uses a predefined [enrichment table](https://vector.dev/docs/reference/glossary/#enrichment-tables) which is use the resources catalog (you should download those in the `./tables/` directory, as `datasets.csv`, `organizations.csv`, `resources.csv`, `reuses.csv` from [the catalog provided on data.gouv.fr](https://www.data.gouv.fr/fr/datasets/catalogue-des-donnees-de-data-gouv-fr/)). This is where you can find a resource and dataset id based on the request
+6. `map_to_resource` is specific to, well, resources. It uses a predefined [enrichment table](https://vector.dev/docs/reference/glossary/#enrichment-tables) which is use the resources catalog. This is where you can find a resource and dataset id based on the request
 7. `metric_count_resources` transforms the log line to a metric — basically it keeps only the fields we need and define a pivot field for metrics computation (what to count)
 8. `aggregate_resources`: aggregate (sum) over 1 minutes
 9. Push the results to influxdb
