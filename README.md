@@ -14,7 +14,7 @@ When launching the stack, it also launches the pipeline computation (ie `vector`
 
 ### Requirements
 
-- [Download data.gouv.fr's catalog from](https://www.data.gouv.fr/fr/datasets/catalogue-des-donnees-de-data-gouv-fr/) and store them in the `./tables/` directory, as `datasets.csv`, `organizations.csv`, `resources.csv`, `reuses.csv`
+- [Download data.gouv.fr's catalog from](https://www.data.gouv.fr/fr/datasets/catalogue-des-donnees-de-data-gouv-fr/) and store them in the `./tables/` directory: `sh catalog.sh`
 - Get some log files and put those in `./logs`
 
 ### Pipeline
