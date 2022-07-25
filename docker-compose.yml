@@ -2,9 +2,10 @@ services:
   vector:
     image: timberio/vector:0.22.2-debian
     volumes:
-      - ./vector.toml:/etc/vector/vector.toml:ro
+      - ./vector:/etc/vector:ro
       - ./logs:/opt/logs:ro
       - ./tables:/opt/tables:ro
+    command: -C /etc/vector
     depends_on:
       influxdb:
         condition: service_healthy

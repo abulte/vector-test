@@ -1,0 +1,5 @@
+# [enrichment_tables.reuses]
+# type = "file"
+# [enrichment_tables.reuses.file]
+# encoding = { type = "csv", delimiter = ";" }
+# path = "/opt/tables/reuses.csv"

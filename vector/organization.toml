@@ -1,0 +1,5 @@
+# [enrichment_tables.organizations]
+# type = "file"
+# [enrichment_tables.organizations.file]
+# encoding = { type = "csv", delimiter = ";" }
+# path = "/opt/tables/organizations.csv"

@@ -1,0 +1,14 @@
+[enrichment_tables.datasets]
+type = "file"
+[enrichment_tables.datasets.file]
+encoding = { type = "csv", delimiter = ";" }
+path = "/opt/tables/datasets.csv"
+
+[transforms.map_to_dataset]
+type = "remap"
+inputs = [ "route_by_type.dataset" ]
+source = '''
+url = join!(["http://www.data.gouv.fr/fr/datasets/", .dataset_path])
+row = get_enrichment_table_record("datasets", {"url": url}) ?? {}
+.dataset_id = get(row, ["id"]) ?? null
+'''
