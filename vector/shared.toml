@@ -60,7 +60,7 @@ inputs = [ "parse_http_request" ]
 # TODO: handle org hits, reuses hits, API hits
 source = '''
 resource_path_match = parse_regex(.path, r'^(https://static.data.gouv.fr)?/resources/(?P<resource_path>.*)') ?? false
-resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/\w{2}/datasets/r/(?P<resource_id>.*)') ?? false
+resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/1)/datasets/r/(?P<resource_id>.*)') ?? false
 
 if is_object(resource_path_match) {
   .request_type = "resource_download"
@@ -69,7 +69,8 @@ if is_object(resource_path_match) {
 } else if is_object(resource_id_match) {
   .request_type = "resource_download"
   .resource_id = resource_id_match.resource_id
-  .request_api = false
+  .language_or_api = resource_id_match.language_or_api
+  .request_api = starts_with(to_string(resource_id_match.language_or_api), "api/")
 } else {
   dataset_path_match = match(.path, r'^(https://www.data.gouv.fr)?/\w{2}/datasets/(?P<dataset_path>.*)') ?? false
   if is_object(dataset_path_match) {
