@@ -1,0 +1,125 @@
+# Here we begin configuring our test suite
+[[tests]]
+name = "Resource log processing - static URL with static in the log"
+
+# The inputs for the test
+[[tests.inputs]]
+insert_at = "parse_syslog" # The transform into which the testing event is inserted
+type = "log"               # The event type (either log or metric)
+
+# The test log event that is passed to the `add_metadata` transform
+[tests.inputs.log_fields]
+message = "Jun  2 00:05:24 slb-04 haproxy[3339033]: 66.249.84.78:47129 [02/Jun/2022:00:05:24.852] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/3/61/+64 200 +14370 - - --NN 820/778/7/3/0 0/0 \"GET https://static.data.gouv.fr/resources/liste-des-structures-france-services/20220523-102427/liste-fs-20220523.csv HTTP/2.0\""
+
+# The expected outputs of the test
+[[tests.outputs]]
+extract_from = "filter_redirects_to_static" # The transform from which the resulting event is extracted
+
+# The declaration of what we expect
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.accept_date, "02/Jun/2022:00:05:24.852")
+assert_eq!(.act, "820")
+assert_eq!(.appname, "haproxy")
+assert_eq!(.backend_name, "DATAGOUVFR_NEWINFRA")
+assert_eq!(.be, "7")
+assert_eq!(.bytes_read, "+14370")
+assert_eq!(.client_ip, "66.249.84.78")
+assert_eq!(.client_port, "47129")
+assert_eq!(.fe, "778")
+assert_eq!(.frontend_name, "DATAGOUVFR_RGS~")
+assert_eq!(.hostname, "slb-04")
+assert_eq!(.http_request, "GET https://static.data.gouv.fr/resources/liste-des-structures-france-services/20220523-102427/liste-fs-20220523.csv HTTP/2.0")
+assert_eq!(.message, "66.249.84.78:47129 [02/Jun/2022:00:05:24.852] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/3/61/+64 200 +14370 - - --NN 820/778/7/3/0 0/0 \"GET https://static.data.gouv.fr/resources/liste-des-structures-france-services/20220523-102427/liste-fs-20220523.csv HTTP/2.0\"")
+assert_eq!(.method, "GET")
+assert_eq!(.path, "https://static.data.gouv.fr/resources/liste-des-structures-france-services/20220523-102427/liste-fs-20220523.csv")
+assert_eq!(.procid, 3339033)
+assert_eq!(.protocol, "HTTP/2.0")
+assert_eq!(.queue_backend, "0")
+assert_eq!(.queue_server, "0")
+assert_eq!(.redirects_to_static, false)
+assert_eq!(.request_api, false)
+assert_eq!(.request_type, "resource_download")
+assert_eq!(.resource_path, "liste-des-structures-france-services/20220523-102427/liste-fs-20220523.csv")
+assert_eq!(.retries, "0")
+assert_eq!(.server_name, "dataweb-06")
+assert_eq!(.srv, "3")
+assert_eq!(.status_code, 200)
+assert_eq!(.tc, "3")
+assert_eq!(.timestamp, t'2022-06-02T00:05:24Z')
+assert_eq!(.tq, "0")
+assert_eq!(.tr, "61")
+assert_eq!(.tt, "+64")
+assert_eq!(.tw, "0")
+'''
+
+[[tests]]
+name = "Resource log processing - static URL without static in the log"
+
+# The inputs for the test
+[[tests.inputs]]
+insert_at = "parse_syslog" # The transform into which the testing event is inserted
+type = "log"               # The event type (either log or metric)
+
+# The test log event that is passed to the `add_metadata` transform
+[tests.inputs.log_fields]
+message = "Jun  2 00:00:17 slb-04 haproxy[3339033]: 82.216.37.213:54758 [02/Jun/2022:00:00:17.414] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/2/35/+37 200 +9216 - - --NN 828/805/7/3/0 0/0 \"GET /resources/indicateurs-de-lactivite-epidemique-taux-dincidence-de-lepidemie-de-covid-19-par-metropole/20220208-191022/sg-metro-opendata-2022-02-08-19h10.csv HTTP/1.1\""
+
+# The expected outputs of the test
+[[tests.outputs]]
+extract_from = "filter_redirects_to_static" # The transform from which the resulting event is extracted
+
+# The declaration of what we expect
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.accept_date, "02/Jun/2022:00:00:17.414")
+assert_eq!(.act, "828")
+assert_eq!(.appname, "haproxy")
+assert_eq!(.backend_name, "DATAGOUVFR_NEWINFRA")
+assert_eq!(.be, "7")
+assert_eq!(.bytes_read, "+9216")
+assert_eq!(.client_ip, "82.216.37.213")
+assert_eq!(.client_port, "54758")
+assert_eq!(.dataset_id, "5f733777722fc12a413290eb")
+assert_eq!(.fe, "805")
+assert_eq!(.frontend_name, "DATAGOUVFR_RGS~")
+assert_eq!(.hostname, "slb-04")
+assert_eq!(.http_request, "GET /resources/indicateurs-de-lactivite-epidemique-taux-dincidence-de-lepidemie-de-covid-19-par-metropole/20220208-191022/sg-metro-opendata-2022-02-08-19h10.csv HTTP/1.1")
+assert_eq!(.message, "82.216.37.213:54758 [02/Jun/2022:00:00:17.414] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/2/35/+37 200 +9216 - - --NN 828/805/7/3/0 0/0 \"GET /resources/indicateurs-de-lactivite-epidemique-taux-dincidence-de-lepidemie-de-covid-19-par-metropole/20220208-191022/sg-metro-opendata-2022-02-08-19h10.csv HTTP/1.1\"")
+assert_eq!(.method, "GET")
+assert_eq!(.path, "/resources/indicateurs-de-lactivite-epidemique-taux-dincidence-de-lepidemie-de-covid-19-par-metropole/20220208-191022/sg-metro-opendata-2022-02-08-19h10.csv")
+assert_eq!(.procid, 3339033)
+assert_eq!(.protocol, "HTTP/1.1")
+assert_eq!(.queue_backend, "0")
+assert_eq!(.queue_server, "0")
+assert_eq!(.redirects_to_static, false)
+assert_eq!(.request_api, false)
+assert_eq!(.request_type, "resource_download")
+assert_eq!(.resource_id, "319a7b21-aee3-40ed-a6e8-edc3d39c3561")
+assert_eq!(.resource_path, "indicateurs-de-lactivite-epidemique-taux-dincidence-de-lepidemie-de-covid-19-par-metropole/20220208-191022/sg-metro-opendata-2022-02-08-19h10.csv")
+assert_eq!(.retries, "0")
+assert_eq!(.server_name, "dataweb-06")
+assert_eq!(.srv, "3")
+assert_eq!(.status_code, 200)
+assert_eq!(.tc, "2")
+assert_eq!(.timestamp, t'2022-06-02T00:00:17Z')
+assert_eq!(.tq, "0")
+assert_eq!(.tr, "35")
+assert_eq!(.tt, "+37")
+assert_eq!(.tw, "0")
+'''
+
+[[tests]]
+name = "Resource log processing - filter out URL which redirects to a static URL"
+no_outputs_from = ["filter_redirects_to_static"]
+
+# The inputs for the test
+[[tests.inputs]]
+insert_at = "parse_syslog" # The transform into which the testing event is inserted
+type = "log"               # The event type (either log or metric)
+
+# The test log event that is passed to the `add_metadata` transform
+[tests.inputs.log_fields]
+message = "Jun  2 00:00:17 slb-04 haproxy[3339033]: 157.55.39.91:29376 [02/Jun/2022:00:00:17.364] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/2/35/+37 302 +748 - - --NN 827/805/11/3/0 0/0 \"GET /fr/datasets/r/50625621-18bd-43cb-8fde-6b8c24bdabb3 HTTP/1.1\""

@@ -5,7 +5,7 @@ services:
       - ./vector:/etc/vector:ro
       - ./logs:/opt/logs:ro
       - ./tables:/opt/tables:ro
-    command: -C /etc/vector
+    command: ${VECTOR_COMMAND}
     depends_on:
       influxdb:
         condition: service_healthy

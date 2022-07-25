@@ -59,9 +59,8 @@ inputs = [ "parse_http_request" ]
 # /resources/recharge-a-destination-tesla/20181130-201629/irve-tesla-destination-charging-20181130.csv
 # TODO: handle org hits, reuses hits, API hits
 source = '''
-resource_path_match = parse_regex(.path, r'^/resources/(?P<resource_path>.*)') ?? false
-resource_id_match = parse_regex(.path, r'^/\w{2}/datasets/r/(?P<resource_id>.*)') ?? false
-resource_static_path_match = parse_regex(.path, r'https://static.data.gouv.fr/resources/(?P<resource_static_path>.*)') ?? false
+resource_path_match = parse_regex(.path, r'^(https://static.data.gouv.fr)?/resources/(?P<resource_path>.*)') ?? false
+resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/\w{2}/datasets/r/(?P<resource_id>.*)') ?? false
 
 if is_object(resource_path_match) {
   .request_type = "resource_download"
@@ -71,12 +70,8 @@ if is_object(resource_path_match) {
   .request_type = "resource_download"
   .resource_id = resource_id_match.resource_id
   .request_api = false
-} else if is_object(resource_static_path_match) {
-  .request_type = "resource_download"
-  .resource_static_path = resource_static_path_match.resource_static_path
-  .request_api = false
 } else {
-  dataset_path_match = match(.path, r'^/\w{2}/datasets/(?P<dataset_path>.*)') ?? false
+  dataset_path_match = match(.path, r'^(https://www.data.gouv.fr)?/\w{2}/datasets/(?P<dataset_path>.*)') ?? false
   if is_object(dataset_path_match) {
     .dataset_name = dataset_path_match.dataset_path
     .request_type = "dataset_hit"
