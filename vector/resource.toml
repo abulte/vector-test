@@ -33,7 +33,7 @@ condition = '!(bool(.redirects_to_static) ?? false) || .method != "GET"'
 
 [transforms.metric_count_resources]
 type = "log_to_metric"
-inputs = [ "map_to_resource" ]
+inputs = [ "filter_redirects_to_static" ]
 
   [[transforms.metric_count_resources.metrics]]
   field = "resource_id"
@@ -52,23 +52,7 @@ inputs = [ "map_to_resource" ]
 # aggregates resources count over time
 # we don't _need_ to aggregate
 # if we don't, metrics.set might be better than metrics.count
-[transforms.aggregate_resources]
-type = "aggregate"
-inputs = [ "metric_count_resources" ]
-interval_ms = 60_000
-
-# TODO:Remove this sink
-[sinks.out]
-type = "console"
-inputs = [ "filter_redirects_to_static" ]
-  [sinks.out.encoding]
-  codec = "json"
-
-[sinks.influxdb_metrics]
-type = "influxdb_metrics"
-inputs = [ "metric_count_resources" ]
-bucket = "vector-bucket"
-endpoint = "http://influxdb:8086/"
-org = "etalab"
-token = "A2jqhzcRPZeT3bAF"
-default_namespace = "service"
+# [transforms.aggregate_resources]
+# type = "aggregate"
+# inputs = [ "metric_count_resources" ]
+# interval_ms = 60_000

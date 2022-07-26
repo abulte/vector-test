@@ -83,7 +83,7 @@ if is_object(resource_path_match) {
   .request_type = "reuse_hit"
   .request_api = starts_with(to_string(reuse_match.language_or_api), "api/")
 } else if is_object(organization_match) {
-  .organization_name = organization_match.reuse_name
+  .organization_name = organization_match.organization_name
   .request_type = "organization_hit"
   .request_api = starts_with(to_string(organization_match.language_or_api), "api/")
 }
@@ -98,3 +98,13 @@ inputs = [ "detect_type" ]
   dataset = '.request_type == "dataset_hit"'
   reuse = '.request_type == "reuse_hit"'
   organization = '.request_type == "organization_hit"'
+
+
+[sinks.influxdb_metrics]
+type = "influxdb_metrics"
+inputs = [ "metric_count_resources", "metric_count_datasets", "metric_count_reuses", "metric_count_organizations" ]
+bucket = "vector-bucket"
+endpoint = "http://influxdb:8086/"
+org = "etalab"
+token = "A2jqhzcRPZeT3bAF"
+default_namespace = "service"
