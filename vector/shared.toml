@@ -60,7 +60,10 @@ inputs = [ "parse_http_request" ]
 # TODO: handle org hits, reuses hits, API hits
 source = '''
 resource_path_match = parse_regex(.path, r'^(https://static.data.gouv.fr)?/resources/(?P<resource_path>.*)') ?? false
-resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/1)/datasets/r/(?P<resource_id>.*)') ?? false
+resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/r/(?P<resource_id>.*)') ?? false
+dataset_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/(?P<dataset_name>[a-zA-Z0-9-]+)/') ?? false
+reuse_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/reuses/(?P<reuse_name>[a-zA-Z0-9-]+)/') ?? false
+organization_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/organizations/(?P<organization_name>[a-zA-Z0-9-]+)/') ?? false
 
 if is_object(resource_path_match) {
   .request_type = "resource_download"
@@ -71,13 +74,18 @@ if is_object(resource_path_match) {
   .resource_id = resource_id_match.resource_id
   .language_or_api = resource_id_match.language_or_api
   .request_api = starts_with(to_string(resource_id_match.language_or_api), "api/")
-} else {
-  dataset_path_match = match(.path, r'^(https://www.data.gouv.fr)?/\w{2}/datasets/(?P<dataset_path>.*)') ?? false
-  if is_object(dataset_path_match) {
-    .dataset_name = dataset_path_match.dataset_path
-    .request_type = "dataset_hit"
-    .request_api = false
-  }
+} else if is_object(dataset_match) {
+  .dataset_name = dataset_match.dataset_name
+  .request_type = "dataset_hit"
+  .request_api = starts_with(to_string(dataset_match.language_or_api), "api/")
+} else if is_object(reuse_match) {
+  .reuse_name = reuse_match.reuse_name
+  .request_type = "reuse_hit"
+  .request_api = starts_with(to_string(reuse_match.language_or_api), "api/")
+} else if is_object(organization_match) {
+  .organization_name = organization_match.reuse_name
+  .request_type = "organization_hit"
+  .request_api = starts_with(to_string(organization_match.language_or_api), "api/")
 }
 '''
 
@@ -88,3 +96,5 @@ inputs = [ "detect_type" ]
   [transforms.route_by_type.route]
   resource = '.request_type == "resource_download"'
   dataset = '.request_type == "dataset_hit"'
+  reuse = '.request_type == "reuse_hit"'
+  organization = '.request_type == "organization_hit"'

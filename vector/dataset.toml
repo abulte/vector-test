@@ -8,7 +8,46 @@ path = "/opt/tables/datasets.csv"
 type = "remap"
 inputs = [ "route_by_type.dataset" ]
 source = '''
-url = join!(["http://www.data.gouv.fr/fr/datasets/", .dataset_path])
+url = join!(["http://www.data.gouv.fr/fr/datasets/", .dataset_name])
 row = get_enrichment_table_record("datasets", {"url": url}) ?? {}
 .dataset_id = get(row, ["id"]) ?? null
 '''
+
+[transforms.metric_count_datasets]
+type = "log_to_metric"
+inputs = [ "map_to_dataset" ]
+
+  [[transforms.metric_count_datasets.metrics]]
+  field = "dataset_id"
+  namespace = "dataset"
+  type = "counter"
+
+    [transforms.metric_count_datasets.metrics.tags]
+    dataset_id = "{{dataset_id}}"
+    request_api = "{{request_api}}"
+    method = "{{method}}"
+    status_code = "{{status_code}}"
+
+# aggregates datasets count over time
+# we don't _need_ to aggregate
+# if we don't, metrics.set might be better than metrics.count
+[transforms.aggregate_datasets]
+type = "aggregate"
+inputs = [ "metric_count_datasets" ]
+interval_ms = 60_000
+
+# TODO:Remove this sink
+[sinks.out]
+type = "console"
+inputs = [ "map_to_dataset" ]
+  [sinks.out.encoding]
+  codec = "json"
+
+[sinks.influxdb_metrics]
+type = "influxdb_metrics"
+inputs = [ "metric_count_datasets" ]
+bucket = "vector-bucket"
+endpoint = "http://influxdb:8086/"
+org = "etalab"
+token = "A2jqhzcRPZeT3bAF"
+default_namespace = "service"

@@ -57,6 +57,7 @@ type = "aggregate"
 inputs = [ "metric_count_resources" ]
 interval_ms = 60_000
 
+# TODO:Remove this sink
 [sinks.out]
 type = "console"
 inputs = [ "filter_redirects_to_static" ]
