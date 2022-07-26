@@ -129,7 +129,7 @@ message = "Jun  2 00:00:17 slb-04 haproxy[3339033]: 157.55.39.91:29376 [02/Jun/2
 
 
 [[tests]]
-name = "Resource log processing - API URL of external resource"
+name = "Resource log processing - API by slug URL of external resource"
 
 [[tests.inputs]]
 insert_at = "parse_syslog"

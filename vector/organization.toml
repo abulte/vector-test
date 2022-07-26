@@ -8,9 +8,10 @@ path = "/opt/tables/organizations.csv"
 type = "remap"
 inputs = [ "route_by_type.organization" ]
 source = '''
-url = join!(["http://www.data.gouv.fr/fr/organizations/", .organization_name, "/"])
-row = get_enrichment_table_record("organizations", {"url": url}) ?? {}
+url = join!(["http://www.data.gouv.fr/fr/organizations/", .organization_id_or_slug, "/"])
+row = get_enrichment_table_record("organizations", {"url": url}) ?? get_enrichment_table_record("organizations", {"id": .organization_id_or_slug}) ?? {}
 .organization_id = get(row, ["id"]) ?? null
+.organization_slug = get(row, ["slug"]) ?? null
 '''
 
 [transforms.metric_count_organizations]

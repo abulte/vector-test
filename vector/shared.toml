@@ -5,8 +5,8 @@ address = "0.0.0.0:8686"
 
 [sources.haproxy]
 type = "file"
-include = [ "/opt/logs/haproxy.log.example" ]
-# include = [ "/opt/logs/haproxy.log.202206*" ]
+# include = [ "/opt/logs/haproxy.log.example" ]
+include = [ "/opt/logs/haproxy.log.202206*" ]
 # include = [ "/opt/logs/haproxy.log.extract_1000" ]
 # include = [ "/opt/logs/haproxy.log.example_aggregate" ]
 read_from = "beginning"
@@ -61,9 +61,9 @@ inputs = [ "parse_http_request" ]
 source = '''
 resource_path_match = parse_regex(.path, r'^(https://static.data.gouv.fr)?/resources/(?P<resource_path>.*)') ?? false
 resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/r/(?P<resource_id>.*)') ?? false
-dataset_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/(?P<dataset_name>[a-zA-Z0-9-]+)/') ?? false
-reuse_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/reuses/(?P<reuse_name>[a-zA-Z0-9-]+)/') ?? false
-organization_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/organizations/(?P<organization_name>[a-zA-Z0-9-]+)/') ?? false
+dataset_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/(?P<dataset_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
+reuse_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/reuses/(?P<reuse_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
+organization_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/organizations/(?P<organization_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
 
 if is_object(resource_path_match) {
   .request_type = "resource_download"
@@ -75,15 +75,15 @@ if is_object(resource_path_match) {
   .language_or_api = resource_id_match.language_or_api
   .request_api = starts_with(to_string(resource_id_match.language_or_api), "api/")
 } else if is_object(dataset_match) {
-  .dataset_name = dataset_match.dataset_name
+  .dataset_id_or_slug = dataset_match.dataset_id_or_slug
   .request_type = "dataset_hit"
   .request_api = starts_with(to_string(dataset_match.language_or_api), "api/")
 } else if is_object(reuse_match) {
-  .reuse_name = reuse_match.reuse_name
+  .reuse_id_or_slug = reuse_match.reuse_id_or_slug
   .request_type = "reuse_hit"
   .request_api = starts_with(to_string(reuse_match.language_or_api), "api/")
 } else if is_object(organization_match) {
-  .organization_name = organization_match.organization_name
+  .organization_id_or_slug = organization_match.organization_id_or_slug
   .request_type = "organization_hit"
   .request_api = starts_with(to_string(organization_match.language_or_api), "api/")
 }

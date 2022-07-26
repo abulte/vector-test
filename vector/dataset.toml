@@ -8,9 +8,10 @@ path = "/opt/tables/datasets.csv"
 type = "remap"
 inputs = [ "route_by_type.dataset" ]
 source = '''
-url = join!(["http://www.data.gouv.fr/fr/datasets/", .dataset_name, "/"])
-row = get_enrichment_table_record("datasets", {"url": url}) ?? {}
+url = join!(["http://www.data.gouv.fr/fr/datasets/", .dataset_id_or_slug, "/"])
+row = get_enrichment_table_record("datasets", {"url": url}) ?? get_enrichment_table_record("datasets", {"id": .dataset_id_or_slug}) ?? {}
 .dataset_id = get(row, ["id"]) ?? null
+.dataset_slug = get(row, ["slug"]) ?? null
 '''
 
 [transforms.metric_count_datasets]
