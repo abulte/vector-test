@@ -25,6 +25,5 @@ inputs = [ "map_to_organization" ]
 
     [transforms.metric_count_organizations.metrics.tags]
     organization_id = "{{organization_id}}"
-    request_api = "{{request_api}}"
-    method = "{{method}}"
     status_code = "{{status_code}}"
+    request_mode = "{{request_mode}}"

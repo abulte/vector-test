@@ -43,9 +43,8 @@ inputs = [ "filter_redirects_to_static" ]
     [transforms.metric_count_resources.metrics.tags]
     resource_id = "{{resource_id}}"
     dataset_id = "{{dataset_id}}"
-    request_api = "{{request_api}}"
-    method = "{{method}}"
     status_code = "{{status_code}}"
+    request_mode = "{{request_mode}}"
     # server_name = "{{server_name}}"
     # client_ip = "{{client_ip}}"
 
