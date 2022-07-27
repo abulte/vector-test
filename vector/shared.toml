@@ -1,0 +1,111 @@
+# used by `vector tap`
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+
+[sources.haproxy]
+type = "file"
+# include = [ "/opt/logs/haproxy.log.example" ]
+include = [ "/opt/logs/haproxy.log.202206*" ]
+# include = [ "/opt/logs/haproxy.log.extract_1000" ]
+# include = [ "/opt/logs/haproxy.log.example_aggregate" ]
+read_from = "beginning"
+# re-read whole file at all times
+# FIXME: remove on real setup
+ignore_checkpoints = true
+
+[transforms.parse_syslog]
+type = "remap"
+inputs = ["haproxy"]
+source = '''
+. = parse_syslog!(.message)
+'''
+
+[transforms.parse_haproxy]
+type = "remap"
+inputs = [ "parse_syslog" ]
+# 34.248.124.42:64539 [12/Jun/2022:00:02:42.773] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/2/1/+3 200 +14384 - - --NN 829/812/5/3/0 0/0 \"GET /_themes/gouvfr/Marianne-Light.f2fc65ec.woff2 HTTP/1.1\
+# https://github.com/gforcada/haproxy_log_analysis/blob/501cc52334e7b9c1e3959e76073ab715a52a6898/haproxy/line.py#L15
+source = '''
+. |= parse_regex!(
+    .message,
+    r'(?P<client_ip>[a-fA-F\d+\.:]+):(?P<client_port>\d+)\s+\[(?P<accept_date>.+)\]\s+(?P<frontend_name>.*)\s+(?P<backend_name>.*)/(?P<server_name>.*)\s+(?P<tq>-?\d+)/(?P<tw>-?\d+)/(?P<tc>-?\d+)/(?P<tr>-?\d+)/(?P<tt>\+?\d+)\s+(?P<status_code>-?\d+)\s+(?P<bytes_read>\+?\d+)\s+.*\s+(?P<act>\d+)/(?P<fe>\d+)/(?P<be>\d+)/(?P<srv>\d+)/(?P<retries>\+?\d+)\s+(?P<queue_server>\d+)/(?P<queue_backend>\d+)\s+"(?P<http_request>.*)"$'
+)
+.status_code = to_int!(.status_code)
+'''
+drop_on_error = true
+
+[transforms.filter_requests]
+type = "filter"
+inputs = [ "parse_haproxy" ]
+# only main datagouvfr backend and filter out http errors
+condition = '.backend_name == "DATAGOUVFR_NEWINFRA" && .status_code >= 200 && .status_code < 400 ?? null && .method == "GET"'
+
+[transforms.parse_http_request]
+type = "remap"
+inputs = [ "filter_requests" ]
+# GET /0d/573351b046807d513851ffeb0121fbd885a8ccea6a9e30fb1b266f5fe761b9.csv HTTP/1.1
+source = '''
+. |= parse_regex!(
+    .http_request,
+    r'(?P<method>\w+)\s+(?P<path>.*)\s+(?P<protocol>\w+/\d\.\d)?'
+)
+'''
+
+[transforms.detect_type]
+type = "remap"
+inputs = [ "parse_http_request" ]
+# /fr/datasets/r/3a908e66-2d33-4cb8-8ce1-66a7a46950a4
+# /resources/recharge-a-destination-tesla/20181130-201629/irve-tesla-destination-charging-20181130.csv
+# TODO: handle org hits, reuses hits, API hits
+source = '''
+resource_path_match = parse_regex(.path, r'^(https://static.data.gouv.fr)?/resources/(?P<resource_path>.*)') ?? false
+resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/r/(?P<resource_id>.*)') ?? false
+dataset_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/(?P<dataset_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
+reuse_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/reuses/(?P<reuse_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
+organization_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/organizations/(?P<organization_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
+
+if is_object(resource_path_match) {
+  .request_type = "resource_download"
+  .resource_path = resource_path_match.resource_path
+  .request_mode = "site"
+} else {
+  if is_object(resource_id_match) {
+    .request_type = "resource_download"
+    .resource_id = resource_id_match.resource_id
+    .request_mode = if starts_with(to_string(resource_id_match.language_or_api), "api") { resource_id_match.language_or_api } else { "site" }
+  } else if is_object(dataset_match) {
+    .dataset_id_or_slug = dataset_match.dataset_id_or_slug
+    .request_type = "dataset_hit"
+    .request_mode = if starts_with(to_string(dataset_match.language_or_api), "api") { dataset_match.language_or_api } else { "site" }
+  } else if is_object(reuse_match) {
+    .reuse_id_or_slug = reuse_match.reuse_id_or_slug
+    .request_type = "reuse_hit"
+    .request_mode = if starts_with(to_string(reuse_match.language_or_api), "api") { reuse_match.language_or_api } else { "site" }
+  } else if is_object(organization_match) {
+    .organization_id_or_slug = organization_match.organization_id_or_slug
+    .request_type = "organization_hit"
+    .request_mode = if starts_with(to_string(organization_match.language_or_api), "api") { organization_match.language_or_api } else { "site" }
+  }
+}
+'''
+
+[transforms.route_by_type]
+type = "route"
+inputs = [ "detect_type" ]
+
+  [transforms.route_by_type.route]
+  resource = '.request_type == "resource_download"'
+  dataset = '.request_type == "dataset_hit"'
+  reuse = '.request_type == "reuse_hit"'
+  organization = '.request_type == "organization_hit"'
+
+
+[sinks.influxdb_metrics]
+type = "influxdb_metrics"
+inputs = [ "metric_count_resources", "metric_count_datasets", "metric_count_reuses", "metric_count_organizations" ]
+bucket = "vector-bucket"
+endpoint = "http://influxdb:8086/"
+org = "etalab"
+token = "A2jqhzcRPZeT3bAF"
+default_namespace = "service"

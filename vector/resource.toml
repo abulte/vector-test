@@ -1,0 +1,57 @@
+[enrichment_tables.resources]
+type = "file"
+  [enrichment_tables.resources.file]
+  encoding = { type = "csv", delimiter = ";" }
+  path = "/opt/tables/resources.csv"
+
+[transforms.map_to_resource]
+type = "remap"
+inputs = [ "route_by_type.resource" ]
+source = '''
+row = {}
+if exists(.resource_id) {
+  row = get_enrichment_table_record("resources", {"id": .resource_id}) ?? {}
+  .dataset_id = get(row, ["dataset.id"]) ?? null
+} else if exists(.resource_path) {
+  url, err = join(["https://static.data.gouv.fr/resources/", .resource_path])
+  if err == null {
+    row = get_enrichment_table_record("resources", {"url": url}) ?? {}
+    .dataset_id = get(row, ["dataset.id"]) ?? null
+    .resource_id = row.id
+  }
+}
+row_url = get(row, ["url"]) ?? null
+# URL format with .resource_path_match is the static URL
+.redirects_to_static = starts_with(to_string(row_url) ?? "", "https://static.data.gouv.fr/resources/") && is_null(.resource_path)
+'''
+
+[transforms.filter_redirects_to_static]
+type = "filter"
+inputs = [ "map_to_resource" ]
+# only main datagouvfr backend and filter out http errors
+condition = '!(bool(.redirects_to_static) ?? false) || .method != "GET"'
+
+[transforms.metric_count_resources]
+type = "log_to_metric"
+inputs = [ "filter_redirects_to_static" ]
+
+  [[transforms.metric_count_resources.metrics]]
+  field = "resource_id"
+  namespace = "resource"
+  type = "counter"
+
+    [transforms.metric_count_resources.metrics.tags]
+    resource_id = "{{resource_id}}"
+    dataset_id = "{{dataset_id}}"
+    status_code = "{{status_code}}"
+    request_mode = "{{request_mode}}"
+    # server_name = "{{server_name}}"
+    # client_ip = "{{client_ip}}"
+
+# aggregates resources count over time
+# we don't _need_ to aggregate
+# if we don't, metrics.set might be better than metrics.count
+# [transforms.aggregate_resources]
+# type = "aggregate"
+# inputs = [ "metric_count_resources" ]
+# interval_ms = 60_000
