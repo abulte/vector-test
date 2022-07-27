@@ -84,7 +84,6 @@ inputs = [ "parse_http_request" ]
 source = '''
 resource_path_match = parse_regex(.path, r'^/resources/(?P<resource_path>.*)') ?? false
 resource_id_match = parse_regex(.path, r'^/\w{2}/datasets/r/(?P<resource_id>.*)') ?? false
-resource_static_path_match = parse_regex(.path, r'https://static.data.gouv.fr/resources/(?P<resource_static_path>.*)') ?? false
 
 if is_object(resource_path_match) {
   .request_type = "resource_download"
@@ -93,10 +92,6 @@ if is_object(resource_path_match) {
 } else if is_object(resource_id_match) {
   .request_type = "resource_download"
   .resource_id = resource_id_match.resource_id
-  .request_api = false
-} else if is_object(resource_static_path_match) {
-  .request_type = "resource_download"
-  .resource_static_path = resource_static_path_match.resource_static_path
   .request_api = false
 } else if match(.path, r'^/\w{2}/datasets/.*') ?? false {
   .request_type = "dataset_hit"
@@ -116,28 +111,18 @@ inputs = [ "detect_type" ]
 type = "remap"
 inputs = [ "route_by_type.resource" ]
 source = '''
-row = {}
 if exists(.resource_id) {
-  row = get_enrichment_table_record("resources", {"id": .resource_id}) ?? {}
+  row = get_enrichment_table_record("resources", {"id": .resource_id}) ?? false
   .dataset_id = get(row, ["dataset.id"]) ?? null
 } else if exists(.resource_path) {
   url, err = join(["https://static.data.gouv.fr/resources/", .resource_path])
   if err == null {
-    row = get_enrichment_table_record("resources", {"url": url}) ?? {}
+    row = get_enrichment_table_record("resources", {"url": url}) ?? false
     .dataset_id = get(row, ["dataset.id"]) ?? null
     .resource_id = row.id
   }
 }
-# if the url is static.data.gouv.fr none of the conditions above is True, thus row_url will be null
-row_url = get(row, ["url"]) ?? null
-.redirects_to_static = starts_with(to_string(row_url), "https://static.data.gouv.fr/resources/")
 '''
-
-[transforms.filter_redirects_to_static]
-type = "filter"
-inputs = [ "filter_redirects_to_static" ]
-# only main datagouvfr backend and filter out http errors
-condition = '!(bool(.redirects_to_static) ?? false) || .method != "GET"'
 
 # TODO:
 # [transforms.map_to_dataset]
@@ -153,7 +138,7 @@ condition = '!(bool(.redirects_to_static) ?? false) || .method != "GET"'
 #   -> see below, works pretty well
 # [transforms.cleanup_message]
 # type = "remap"
-# inputs = ["filter_redirects_to_static"]
+# inputs = ["map_to_resource"]
 # source = '''
 # del(.accept_date) # "12/Jun/2022:00:00:42.629",
 # del(.act) # "759",
@@ -188,7 +173,7 @@ condition = '!(bool(.redirects_to_static) ?? false) || .method != "GET"'
 
 [transforms.metric_count_resources]
 type = "log_to_metric"
-inputs = [ "filter_redirects_to_static" ]
+inputs = [ "map_to_resource" ]
 
   [[transforms.metric_count_resources.metrics]]
   field = "resource_id"
