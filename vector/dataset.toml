@@ -27,3 +27,4 @@ inputs = [ "map_to_dataset" ]
     dataset_id = "{{dataset_id}}"
     status_code = "{{status_code}}"
     request_mode = "{{request_mode}}"
+    request_type = "{{request_type}}"

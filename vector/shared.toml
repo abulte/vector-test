@@ -61,6 +61,7 @@ inputs = [ "parse_http_request" ]
 source = '''
 resource_path_match = parse_regex(.path, r'^(https://static.data.gouv.fr)?/resources/(?P<resource_path>.*)') ?? false
 resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/r/(?P<resource_id>.*)') ?? false
+resource_hit_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<api_version>api/[1-2])/datasets/(?P<dataset_id_or_slug>[a-zA-Z0-9-]+)/resources/(?P<resource_id>.*)/') ?? false
 dataset_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/(?P<dataset_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
 reuse_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/reuses/(?P<reuse_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
 organization_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/organizations/(?P<organization_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
@@ -74,6 +75,11 @@ if is_object(resource_path_match) {
     .request_type = "resource_download"
     .resource_id = resource_id_match.resource_id
     .request_mode = if starts_with(to_string(resource_id_match.language_or_api), "api") { resource_id_match.language_or_api } else { "site" }
+  } else if is_object(resource_hit_match) {
+    .request_type = "resource_hit"
+    .dataset_id_or_slug = resource_hit_match.dataset_id_or_slug
+    .resource_id = resource_hit_match.resource_id
+    .request_mode = resource_hit_match.api_version
   } else if is_object(dataset_match) {
     .dataset_id_or_slug = dataset_match.dataset_id_or_slug
     .request_type = "dataset_hit"
@@ -96,6 +102,7 @@ inputs = [ "detect_type" ]
 
   [transforms.route_by_type.route]
   resource = '.request_type == "resource_download"'
+  resource_hit = '.request_type == "resource_hit"'
   dataset = '.request_type == "dataset_hit"'
   reuse = '.request_type == "reuse_hit"'
   organization = '.request_type == "organization_hit"'
@@ -103,7 +110,7 @@ inputs = [ "detect_type" ]
 
 [sinks.influxdb_metrics]
 type = "influxdb_metrics"
-inputs = [ "metric_count_resources", "metric_count_datasets", "metric_count_reuses", "metric_count_organizations" ]
+inputs = [ "metric_count_resources", "metric_count_resource_hits", "metric_count_datasets", "metric_count_reuses", "metric_count_organizations" ]
 bucket = "vector-bucket"
 endpoint = "http://influxdb:8086/"
 org = "etalab"

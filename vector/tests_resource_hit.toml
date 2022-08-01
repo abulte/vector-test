@@ -1,0 +1,103 @@
+[[tests]]
+name = "Resource hit log processing - API by slug"
+
+[[tests.inputs]]
+insert_at = "parse_syslog"
+type = "log"
+
+[tests.inputs.log_fields]
+message = "Jun  2 00:05:24 slb-04 haproxy[3339033]: 66.249.84.78:47129 [02/Jun/2022:00:05:24.852] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/3/61/+64 200 +14370 - - --NN 820/778/7/3/0 0/0 \"GET /api/1/datasets/population/resources/80cfc11c-f0c4-47c5-ad7a-67a2077692c8/ HTTP/1.1\""
+
+[[tests.outputs]]
+extract_from = "map_to_resource_hit"
+
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.accept_date, "02/Jun/2022:00:05:24.852")
+assert_eq!(.act, "820")
+assert_eq!(.appname, "haproxy")
+assert_eq!(.backend_name, "DATAGOUVFR_NEWINFRA")
+assert_eq!(.be, "7")
+assert_eq!(.bytes_read, "+14370")
+assert_eq!(.client_ip, "66.249.84.78")
+assert_eq!(.client_port, "47129")
+assert_eq!(.resource_id, "80cfc11c-f0c4-47c5-ad7a-67a2077692c8")
+assert_eq!(.dataset_id, "53699d0ea3a729239d205b2e")
+assert_eq!(.dataset_slug, "population")
+assert_eq!(.fe, "778")
+assert_eq!(.frontend_name, "DATAGOUVFR_RGS~")
+assert_eq!(.hostname, "slb-04")
+assert_eq!(.http_request, "GET /api/1/datasets/population/resources/80cfc11c-f0c4-47c5-ad7a-67a2077692c8/ HTTP/1.1")
+assert_eq!(.message, "66.249.84.78:47129 [02/Jun/2022:00:05:24.852] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/3/61/+64 200 +14370 - - --NN 820/778/7/3/0 0/0 \"GET /api/1/datasets/population/resources/80cfc11c-f0c4-47c5-ad7a-67a2077692c8/ HTTP/1.1\"")
+assert_eq!(.method, "GET")
+assert_eq!(.path, "/api/1/datasets/population/resources/80cfc11c-f0c4-47c5-ad7a-67a2077692c8/")
+assert_eq!(.procid, 3339033)
+assert_eq!(.protocol, "HTTP/1.1")
+assert_eq!(.queue_backend, "0")
+assert_eq!(.queue_server, "0")
+assert_eq!(.request_mode, "api/1")
+assert_eq!(.request_type, "resource_hit")
+assert_eq!(.retries, "0")
+assert_eq!(.server_name, "dataweb-06")
+assert_eq!(.srv, "3")
+assert_eq!(.status_code, 200)
+assert_eq!(.tc, "3")
+assert_eq!(.timestamp, t'2022-06-02T00:05:24Z')
+assert_eq!(.tq, "0")
+assert_eq!(.tr, "61")
+assert_eq!(.tt, "+64")
+assert_eq!(.tw, "0")
+'''
+
+[[tests]]
+name = "Resource hit log processing - API by id"
+
+[[tests.inputs]]
+insert_at = "parse_syslog"
+type = "log"
+
+[tests.inputs.log_fields]
+message = "Jun  2 00:05:24 slb-04 haproxy[3339033]: 66.249.84.78:47129 [02/Jun/2022:00:05:24.852] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/3/61/+64 200 +14370 - - --NN 820/778/7/3/0 0/0 \"GET /api/1/datasets/53699d0ea3a729239d205b2e/resources/80cfc11c-f0c4-47c5-ad7a-67a2077692c8/ HTTP/1.1\""
+
+[[tests.outputs]]
+extract_from = "map_to_resource_hit"
+
+[[tests.outputs.conditions]]
+type = "vrl"
+source = '''
+assert_eq!(.accept_date, "02/Jun/2022:00:05:24.852")
+assert_eq!(.act, "820")
+assert_eq!(.appname, "haproxy")
+assert_eq!(.backend_name, "DATAGOUVFR_NEWINFRA")
+assert_eq!(.be, "7")
+assert_eq!(.bytes_read, "+14370")
+assert_eq!(.client_ip, "66.249.84.78")
+assert_eq!(.client_port, "47129")
+assert_eq!(.resource_id, "80cfc11c-f0c4-47c5-ad7a-67a2077692c8")
+assert_eq!(.dataset_id, "53699d0ea3a729239d205b2e")
+assert_eq!(.dataset_slug, "population")
+assert_eq!(.fe, "778")
+assert_eq!(.frontend_name, "DATAGOUVFR_RGS~")
+assert_eq!(.hostname, "slb-04")
+assert_eq!(.http_request, "GET /api/1/datasets/53699d0ea3a729239d205b2e/resources/80cfc11c-f0c4-47c5-ad7a-67a2077692c8/ HTTP/1.1")
+assert_eq!(.message, "66.249.84.78:47129 [02/Jun/2022:00:05:24.852] DATAGOUVFR_RGS~ DATAGOUVFR_NEWINFRA/dataweb-06 0/0/3/61/+64 200 +14370 - - --NN 820/778/7/3/0 0/0 \"GET /api/1/datasets/53699d0ea3a729239d205b2e/resources/80cfc11c-f0c4-47c5-ad7a-67a2077692c8/ HTTP/1.1\"")
+assert_eq!(.method, "GET")
+assert_eq!(.path, "/api/1/datasets/53699d0ea3a729239d205b2e/resources/80cfc11c-f0c4-47c5-ad7a-67a2077692c8/")
+assert_eq!(.procid, 3339033)
+assert_eq!(.protocol, "HTTP/1.1")
+assert_eq!(.queue_backend, "0")
+assert_eq!(.queue_server, "0")
+assert_eq!(.request_mode, "api/1")
+assert_eq!(.request_type, "resource_hit")
+assert_eq!(.retries, "0")
+assert_eq!(.server_name, "dataweb-06")
+assert_eq!(.srv, "3")
+assert_eq!(.status_code, 200)
+assert_eq!(.tc, "3")
+assert_eq!(.timestamp, t'2022-06-02T00:05:24Z')
+assert_eq!(.tq, "0")
+assert_eq!(.tr, "61")
+assert_eq!(.tt, "+64")
+assert_eq!(.tw, "0")
+'''

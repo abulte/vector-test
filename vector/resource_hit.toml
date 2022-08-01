@@ -1,0 +1,33 @@
+[transforms.map_to_resource_hit]
+type = "remap"
+inputs = [ "route_by_type.resource_hit" ]
+source = '''
+url = join!(["http://www.data.gouv.fr/fr/datasets/", .dataset_id_or_slug, "/"])
+row = get_enrichment_table_record("datasets", {"url": url}) ?? get_enrichment_table_record("datasets", {"id": .dataset_id_or_slug}) ?? {}
+.dataset_id = get(row, ["id"]) ?? null
+.dataset_slug = get(row, ["slug"]) ?? null
+'''
+
+[transforms.metric_count_resource_hits]
+type = "log_to_metric"
+inputs = [ "map_to_resource_hit" ]
+
+  [[transforms.metric_count_resource_hits.metrics]]
+  field = "resource_id"
+  namespace = "resource_hit"
+  type = "counter"
+
+    [transforms.metric_count_resource_hits.metrics.tags]
+    resource_id = "{{resource_id}}"
+    dataset_id = "{{dataset_id}}"
+    status_code = "{{status_code}}"
+    request_mode = "{{request_mode}}"
+    request_type = "{{request_type}}"
+
+# aggregates resources count over time
+# we don't _need_ to aggregate
+# if we don't, metrics.set might be better than metrics.count
+# [transforms.aggregate_resource_hits]
+# type = "aggregate"
+# inputs = [ "metric_count_resource_hits" ]
+# interval_ms = 60_000
