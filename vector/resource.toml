@@ -49,10 +49,7 @@ inputs = [ "filter_redirects_to_static" ]
     # server_name = "{{server_name}}"
     # client_ip = "{{client_ip}}"
 
-# aggregates resources count over time
-# we don't _need_ to aggregate
-# if we don't, metrics.set might be better than metrics.count
-# [transforms.aggregate_resources]
-# type = "aggregate"
-# inputs = [ "metric_count_resources" ]
-# interval_ms = 60_000
+[transforms.aggregate_resources]
+type = "aggregate"
+inputs = [ "metric_count_resources" ]
+interval_ms = 60_000

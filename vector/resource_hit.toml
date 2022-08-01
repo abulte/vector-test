@@ -24,10 +24,7 @@ inputs = [ "map_to_resource_hit" ]
     request_mode = "{{request_mode}}"
     request_type = "{{request_type}}"
 
-# aggregates resources count over time
-# we don't _need_ to aggregate
-# if we don't, metrics.set might be better than metrics.count
-# [transforms.aggregate_resource_hits]
-# type = "aggregate"
-# inputs = [ "metric_count_resource_hits" ]
-# interval_ms = 60_000
+[transforms.aggregate_resource_hits]
+type = "aggregate"
+inputs = [ "metric_count_resource_hits" ]
+interval_ms = 60_000
