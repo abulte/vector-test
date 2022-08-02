@@ -23,8 +23,3 @@ inputs = [ "map_to_resource_hit" ]
     status_code = "{{status_code}}"
     request_mode = "{{request_mode}}"
     request_type = "{{request_type}}"
-
-[transforms.aggregate_resource_hits]
-type = "aggregate"
-inputs = [ "metric_count_resource_hits" ]
-interval_ms = 60_000

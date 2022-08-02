@@ -110,7 +110,7 @@ inputs = [ "detect_type" ]
 
 [sinks.influxdb_metrics]
 type = "influxdb_metrics"
-inputs = [ "aggregate_resources", "aggregate_resource_hits", "aggregate_datasets", "aggregate_reuses", "aggregate_organizations" ]
+inputs = [ "metric_count_resources", "metric_count_resource_hits", "metric_count_datasets", "metric_count_reuses", "metric_count_organizations" ]
 bucket = "vector-bucket"
 endpoint = "http://influxdb:8086/"
 org = "etalab"

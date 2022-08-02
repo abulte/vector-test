@@ -28,8 +28,3 @@ inputs = [ "map_to_dataset" ]
     status_code = "{{status_code}}"
     request_mode = "{{request_mode}}"
     request_type = "{{request_type}}"
-
-[transforms.aggregate_datasets]
-type = "aggregate"
-inputs = [ "metric_count_datasets" ]
-interval_ms = 60_000
