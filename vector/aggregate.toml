@@ -1,0 +1,24 @@
+[transforms.aggregate_resources]
+type = "aggregate"
+inputs = [ "metric_count_resources" ]
+interval_ms = 60_000
+
+[transforms.aggregate_resource_hits]
+type = "aggregate"
+inputs = [ "metric_count_resource_hits" ]
+interval_ms = 60_000
+
+[transforms.aggregate_datasets]
+type = "aggregate"
+inputs = [ "metric_count_datasets" ]
+interval_ms = 60_000
+
+[transforms.aggregate_reuses]
+type = "aggregate"
+inputs = [ "metric_count_reuses" ]
+interval_ms = 60_000
+
+[transforms.aggregate_organizations]
+type = "aggregate"
+inputs = [ "metric_count_organizations" ]
+interval_ms = 60_000
