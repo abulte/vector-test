@@ -35,15 +35,9 @@ source = '''
 '''
 drop_on_error = true
 
-[transforms.filter_requests]
-type = "filter"
-inputs = [ "parse_haproxy" ]
-# only main datagouvfr backend and filter out http errors
-condition = '.backend_name == "DATAGOUVFR_NEWINFRA" && .status_code >= 200 && .status_code < 400 ?? null && .method == "GET"'
-
 [transforms.parse_http_request]
 type = "remap"
-inputs = [ "filter_requests" ]
+inputs = [ "parse_haproxy" ]
 # GET /0d/573351b046807d513851ffeb0121fbd885a8ccea6a9e30fb1b266f5fe761b9.csv HTTP/1.1
 source = '''
 . |= parse_regex!(
@@ -52,16 +46,22 @@ source = '''
 )
 '''
 
+[transforms.filter_requests]
+type = "filter"
+inputs = [ "parse_http_request" ]
+# only main datagouvfr backend and filter out http errors
+condition = '.backend_name == "DATAGOUVFR_NEWINFRA" && .status_code >= 200 && .status_code < 400 ?? null && .method == "GET"'
+
 [transforms.detect_type]
 type = "remap"
-inputs = [ "parse_http_request" ]
+inputs = [ "filter_requests" ]
 # /fr/datasets/r/3a908e66-2d33-4cb8-8ce1-66a7a46950a4
 # /resources/recharge-a-destination-tesla/20181130-201629/irve-tesla-destination-charging-20181130.csv
 # TODO: handle org hits, reuses hits, API hits
 source = '''
 resource_path_match = parse_regex(.path, r'^(https://static.data.gouv.fr)?/resources/(?P<resource_path>.*)') ?? false
-resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/r/(?P<resource_id>.*)') ?? false
-resource_hit_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<api_version>api/[1-2])/datasets/(?P<dataset_id_or_slug>[a-zA-Z0-9-]+)/resources/(?P<resource_id>.*)/') ?? false
+resource_id_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/r/(?P<resource_id>[a-zA-Z0-9-]+)') ?? false
+resource_hit_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<api_version>api/[1-2])/datasets/(?P<dataset_id_or_slug>[a-zA-Z0-9-]+)/resources/(?P<resource_id>[a-zA-Z0-9-]+)/') ?? false
 dataset_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/datasets/(?P<dataset_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
 reuse_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/reuses/(?P<reuse_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
 organization_match = parse_regex(.path, r'^(https://www.data.gouv.fr)?/(?P<language_or_api>\w{2}|api/[1-2])/organizations/(?P<organization_id_or_slug>[a-zA-Z0-9-]+)/') ?? false
