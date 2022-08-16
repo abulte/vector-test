@@ -1,0 +1,30 @@
+[enrichment_tables.datasets]
+type = "file"
+[enrichment_tables.datasets.file]
+encoding = { type = "csv", delimiter = ";" }
+path = "/opt/tables/datasets.csv"
+
+[transforms.map_to_dataset]
+type = "remap"
+inputs = [ "route_by_type.dataset" ]
+source = '''
+url = join!(["http://www.data.gouv.fr/fr/datasets/", .dataset_id_or_slug, "/"])
+row = get_enrichment_table_record("datasets", {"url": url}) ?? get_enrichment_table_record("datasets", {"id": .dataset_id_or_slug}) ?? {}
+.dataset_id = get(row, ["id"]) ?? null
+.dataset_slug = get(row, ["slug"]) ?? null
+'''
+
+[transforms.metric_count_datasets]
+type = "log_to_metric"
+inputs = [ "map_to_dataset" ]
+
+  [[transforms.metric_count_datasets.metrics]]
+  field = "dataset_id"
+  namespace = "dataset"
+  type = "counter"
+
+    [transforms.metric_count_datasets.metrics.tags]
+    dataset_id = "{{dataset_id}}"
+    status_code = "{{status_code}}"
+    request_mode = "{{request_mode}}"
+    request_type = "{{request_type}}"

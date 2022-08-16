@@ -1,0 +1,30 @@
+[enrichment_tables.reuses]
+type = "file"
+[enrichment_tables.reuses.file]
+encoding = { type = "csv", delimiter = ";" }
+path = "/opt/tables/reuses.csv"
+
+[transforms.map_to_reuse]
+type = "remap"
+inputs = [ "route_by_type.reuse" ]
+source = '''
+url = join!(["http://www.data.gouv.fr/fr/reuses/", .reuse_id_or_slug, "/"])
+row = get_enrichment_table_record("reuses", {"url": url}) ?? get_enrichment_table_record("reuses", {"id": .reuse_id_or_slug}) ?? {}
+.reuse_id = get(row, ["id"]) ?? null
+.reuse_slug = get(row, ["slug"]) ?? null
+'''
+
+[transforms.metric_count_reuses]
+type = "log_to_metric"
+inputs = [ "map_to_reuse" ]
+
+  [[transforms.metric_count_reuses.metrics]]
+  field = "reuse_id"
+  namespace = "reuse"
+  type = "counter"
+
+    [transforms.metric_count_reuses.metrics.tags]
+    reuse_id = "{{reuse_id}}"
+    status_code = "{{status_code}}"
+    request_mode = "{{request_mode}}"
+    request_type = "{{request_type}}"

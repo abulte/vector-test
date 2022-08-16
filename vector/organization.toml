@@ -1,0 +1,30 @@
+[enrichment_tables.organizations]
+type = "file"
+[enrichment_tables.organizations.file]
+encoding = { type = "csv", delimiter = ";" }
+path = "/opt/tables/organizations.csv"
+
+[transforms.map_to_organization]
+type = "remap"
+inputs = [ "route_by_type.organization" ]
+source = '''
+url = join!(["http://www.data.gouv.fr/fr/organizations/", .organization_id_or_slug, "/"])
+row = get_enrichment_table_record("organizations", {"url": url}) ?? get_enrichment_table_record("organizations", {"id": .organization_id_or_slug}) ?? {}
+.organization_id = get(row, ["id"]) ?? null
+.organization_slug = get(row, ["slug"]) ?? null
+'''
+
+[transforms.metric_count_organizations]
+type = "log_to_metric"
+inputs = [ "map_to_organization" ]
+
+  [[transforms.metric_count_organizations.metrics]]
+  field = "organization_id"
+  namespace = "organization"
+  type = "counter"
+
+    [transforms.metric_count_organizations.metrics.tags]
+    organization_id = "{{organization_id}}"
+    status_code = "{{status_code}}"
+    request_mode = "{{request_mode}}"
+    request_type = "{{request_type}}"
