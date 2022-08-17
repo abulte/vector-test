@@ -21,6 +21,7 @@ with InfluxDBClient(url=url, token=token, org=org) as client:
 
     for duration in durations:
         for name, measurement in measurements_dict.items():
+            # id_key may be "reuse_id", "resource_id", "dataset_id", "organization_id".
             id_key = f"{measurement}".split(".")[1]
             query = f"""
                 from(bucket: "{bucket}")
