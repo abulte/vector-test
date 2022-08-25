@@ -6,7 +6,7 @@ address = "0.0.0.0:8686"
 [sources.haproxy]
 type = "file"
 # include = [ "/opt/logs/haproxy.log.example" ]
-include = [ "/opt/logs/haproxy.log.202206*" ]
+include = [ "/opt/logs/haproxy.log.202208*" ]
 # include = [ "/opt/logs/haproxy.log.extract_1000" ]
 # include = [ "/opt/logs/haproxy.log.example_aggregate" ]
 read_from = "beginning"
