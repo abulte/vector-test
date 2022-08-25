@@ -13,12 +13,25 @@ if exists(.resource_id) {
   row = get_enrichment_table_record("resources", {"id": .resource_id}) ?? {}
   .dataset_id = get(row, ["dataset.id"]) ?? null
 } else if exists(.resource_path) {
-  url, err = join(["https://static.data.gouv.fr/resources/", .resource_path])
-  if err == null {
-    row = get_enrichment_table_record("resources", {"url": url}) ?? {}
-    .dataset_id = get(row, ["dataset.id"]) ?? null
-    .resource_id = row.id
+  # Try to match exact URL
+  url = join(["https://static.data.gouv.fr/resources/", .resource_path]) ?? ""
+  row = get_enrichment_table_record("resources", {"url": url}) ?? {}
+  if row == {} {
+    # If it fails, match dataset slug and filename and take last corresponding file
+    # We may have multiple resources with the same filename. In this case we cannot know which
+    # one was requested, which is why we pick one randomly.
+    dataset_slug = split(.resource_path, "/")[0] ?? ""
+    resource_name = split(.resource_path, "/")[-1] ?? ""
+    dataset_rows = find_enrichment_table_records("resources", {"dataset.slug": dataset_slug}) ?? []
+    for_each(dataset_rows) -> |_index, value| {
+      resource_url = get(value, ["url"]) ?? ""
+      if ends_with!(resource_url, resource_name) {
+        row = get!(dataset_rows, [_index])
+      }
+    }
   }
+  .resource_id = row.id
+  .dataset_id = get(row, ["dataset.id"]) ?? null
 }
 row_url = get(row, ["url"]) ?? null
 # URL format with .resource_path_match is the static URL
