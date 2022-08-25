@@ -50,7 +50,7 @@ source = '''
 type = "filter"
 inputs = [ "parse_http_request" ]
 # only main datagouvfr backend and filter out http errors
-condition = '.backend_name == "DATAGOUVFR_NEWINFRA" && .status_code >= 200 && .status_code < 400 ?? null && .method == "GET"'
+condition = '(.backend_name == "DATAGOUVFR_NEWINFRA") && (.status_code >= 200) && (.status_code < 400) && (.method == "GET") ?? null'
 
 [transforms.detect_type]
 type = "remap"
