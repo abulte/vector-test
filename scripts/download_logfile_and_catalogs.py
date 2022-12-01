@@ -18,6 +18,11 @@ CATALOG_RESOURCE_IDS = {
 }
 
 
+if 'MINIO_USER' not in os.environ or 'MINIO_PASSWORD' not in os.environ:
+    logging.error('You need to set MINIO_USER and MINIO_PASSWORD env to download logs')
+    exit(1)
+
+
 def download_file(url: str, target_filepath: str) -> str:
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
@@ -54,36 +59,34 @@ def download_from_minio(netloc: str, bucket: str, key: str, filepath: str, minio
         logging.error(e)
 
 
-while True:
-    yesterday = date.today() - timedelta(days=1)
-    yesterday_str = yesterday.strftime('%Y%m%d')
-    log_filename = f"haproxy.log.{yesterday_str}"
-    logs_folder = "logs"
-    log_filepath = os.path.join(logs_folder, log_filename)
-    os.makedirs(logs_folder, exist_ok=True)
+# TODO: to schedule once a day at the right time
+yesterday = date.today() - timedelta(days=1)
+yesterday_str = yesterday.strftime('%Y%m%d')
+log_filename = f"haproxy.log.{yesterday_str}"
+logs_folder = "logs"
+log_filepath = os.path.join(logs_folder, log_filename)
+os.makedirs(logs_folder, exist_ok=True)
 
-    logging.debug(f"Checking if {log_filepath} exists")
-    if not os.path.exists(log_filepath):
-        logging.info("About to download")
-        for catalog, catalog_id in CATALOG_RESOURCE_IDS.items():
-            logging.info(f"Downloading {catalog} catalog")
-            download_file(f"https://www.data.gouv.fr/fr/datasets/r/{catalog_id}", f"tables/{catalog}.csv")
+logging.debug(f"Checking if {log_filepath} exists")
+if not os.path.exists(log_filepath):
+    logging.info("About to download")
+    for catalog, catalog_id in CATALOG_RESOURCE_IDS.items():
+        logging.info(f"Downloading {catalog} catalog")
+        download_file(f"https://www.data.gouv.fr/fr/datasets/r/{catalog_id}", f"tables/{catalog}.csv")
 
-        logging.info(f"Downloading to {log_filepath}...")
-        download_from_minio(
-            "https://object.files.data.gouv.fr",
-            bucket="dataeng",
-            key=f"prod-logs/{log_filename}",
-            filepath=log_filepath,
-            minio_user=os.environ["MINIO_USER"],
-            minio_pwd=os.environ["MINIO_PASSWORD"],
-        )
+    logging.info(f"Downloading to {log_filepath}...")
+    download_from_minio(
+        "https://object.files.data.gouv.fr",
+        bucket="dataeng",
+        key=f"prod-logs/{log_filename}",
+        filepath=log_filepath,
+        minio_user=os.environ["MINIO_USER"],
+        minio_pwd=os.environ["MINIO_PASSWORD"],
+    )
 
-        # Remove previous day logs
-        two_days_ago = (yesterday - timedelta(days=1)).strftime('%Y%m%d')
-        previous_log_filename = f"haproxy.log.{two_days_ago}"
-        previous_log_path = os.path.join(logs_folder, previous_log_filename)
-        if os.path.exists(previous_log_path):
-            os.remove(previous_log_path)
-
-    time.sleep(60)
+    # Remove previous day logs
+    two_days_ago = (yesterday - timedelta(days=1)).strftime('%Y%m%d')
+    previous_log_filename = f"haproxy.log.{two_days_ago}"
+    previous_log_path = os.path.join(logs_folder, previous_log_filename)
+    if os.path.exists(previous_log_path):
+        os.remove(previous_log_path)

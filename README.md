@@ -14,8 +14,8 @@ When launching the stack, it also launches the pipeline computation (ie `vector`
 
 ### Requirements
 
-- Upload yesterday's logs to Minio
-- Run `python download_logfile_and_catalogs.py` to download [data.gouv.fr's catalog](https://www.data.gouv.fr/fr/datasets/catalogue-des-donnees-de-data-gouv-fr/) and store them in the `./tables/` directory and download yesterday's log file to `./logs`.
+- Upload yesterday's logs to Minio (should be done with a cron)
+- Run `python script/download_logfile_and_catalogs.py` to download [data.gouv.fr's catalog](https://www.data.gouv.fr/fr/datasets/catalogue-des-donnees-de-data-gouv-fr/) and store them in the `./tables/` directory and download yesterday's log file to `./logs`.
 
 ### Pipeline
 
