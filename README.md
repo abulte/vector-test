@@ -56,8 +56,13 @@ This is the current data model sent from vector to influxdb.
 
 influxdb indexes `tags` as fields, in a measurement named by `namespace`.`name`, with the associated `timestamp` and `counter.value` as value.
 
-influxdb exposes a dashboard on http://localhost:8086/ (influxdb/influxdb) where it's possible to query the timeseries. For example, this queries the download count over time for a given resource.
+influxdb exposes a dashboard on http://localhost:8086/ (influxdb/influxdb) where it's possible to query the timeseries. For example, this query shows all entries in your influxdb:
+```
+from(bucket: "vector-bucket")
+  |> range(start: 0, stop: v.timeRangeStop)
+```
 
+You can filter the query to get the download count over time for a given resource.
 ```
 from(bucket: "vector-bucket")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
