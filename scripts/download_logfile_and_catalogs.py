@@ -18,11 +18,6 @@ CATALOG_RESOURCE_IDS = {
 }
 
 
-if 'MINIO_USER' not in os.environ or 'MINIO_PASSWORD' not in os.environ:
-    logging.error('You need to set MINIO_USER and MINIO_PASSWORD env to download logs')
-    exit(1)
-
-
 def download_file(url: str, target_filepath: str) -> str:
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
@@ -67,14 +62,24 @@ logs_folder = "logs"
 log_filepath = os.path.join(logs_folder, log_filename)
 os.makedirs(logs_folder, exist_ok=True)
 
+tables_folder = "tables"
+os.makedirs(tables_folder, exist_ok=True)
+
+logging.info(f"Downloading latest catalogs")
+for catalog, catalog_id in CATALOG_RESOURCE_IDS.items():
+    logging.info(f"Downloading {catalog} catalog")
+    download_file(f"https://www.data.gouv.fr/fr/datasets/r/{catalog_id}", f"{tables_folder}/{catalog}.csv")
+
+
 logging.debug(f"Checking if {log_filepath} exists")
 if not os.path.exists(log_filepath):
     logging.info("About to download")
-    for catalog, catalog_id in CATALOG_RESOURCE_IDS.items():
-        logging.info(f"Downloading {catalog} catalog")
-        download_file(f"https://www.data.gouv.fr/fr/datasets/r/{catalog_id}", f"tables/{catalog}.csv")
 
-    logging.info(f"Downloading to {log_filepath}...")
+    if 'MINIO_USER' not in os.environ or 'MINIO_PASSWORD' not in os.environ:
+        logging.error('You need to set MINIO_USER and MINIO_PASSWORD env to download logs')
+        exit(1)
+
+    logging.info(f"Downloading logs to {log_filepath}...")
     download_from_minio(
         "https://object.files.data.gouv.fr",
         bucket="dataeng",
